@@ -1,6 +1,7 @@
 
 #include <SPI.h>
 #include <Adafruit_MAX31855.h>
+#include <Wire.h>
 
 #define MAXDO   3
 #define MAXCS   4
@@ -18,6 +19,9 @@ unsigned long previousMillis = 0;
 unsigned long heatbedTimer = 0;
 
 void setup() {
+  Wire.begin(8);
+  Wire.onRequest(requestEvent);
+  
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(MOTOR_IN1, OUTPUT);
   pinMode(MOTOR_IN2, OUTPUT);
@@ -64,4 +68,9 @@ void heatbed() {
     digitalWrite(MOTOR_IN2, LOW);
     digitalWrite(LED_BUILTIN, LOW);
   }
+}
+
+void requestEvent() {
+  Wire.write("hello "); // respond with message of 6 bytes
+  // as expected by master
 }
