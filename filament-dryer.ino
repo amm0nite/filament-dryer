@@ -15,8 +15,16 @@
 
 Adafruit_MAX31855 thermocouple(MAXCLK, MAXCS, MAXDO);
 
+typedef enum {
+  COOLING,
+  HEATING,
+  BLOCKED,
+}fds;
+
 unsigned long previousMillis = 0;
 unsigned long heatbedTimer = 0;
+double heatbedTemperature = 0;
+fds globalState = fds::COOLING;
 
 void setup() {
   Wire.begin(8);
@@ -29,7 +37,7 @@ void setup() {
   while (!Serial);
 
   Serial.begin(9600);
-  Serial.println("Spool Dryer");
+  Serial.println("Filament Dryer");
   
   // wait for MAX chip to stabilize
   delay(500);
@@ -48,18 +56,28 @@ void loop() {
 }
 
 void heatbed() {
-  Serial.print("Internal Temp = ");
-  Serial.println(thermocouple.readInternal());
+  //Serial.print("Internal Temp = ");
+  //Serial.println(thermocouple.readInternal());
   
-  double c = thermocouple.readCelsius();
-  if (isnan(c)) {
+  double temp = thermocouple.readCelsius();
+  if (isnan(temp)) {
     Serial.println("Something wrong with thermocouple!");
-  } else {
-    Serial.print("C = ");
-    Serial.println(c);
+    globalState = fds::BLOCKED;
   }
 
-  if (c < HB_TARGET_TEMP) {
+  //Serial.print("C = ");
+  //Serial.println(temp);
+  heatbedTemperature = temp;
+  
+  if (globalState != fds::BLOCKED) {
+    if (temp < HB_TARGET_TEMP) {
+      globalState = fds::HEATING;
+    } else {
+      globalState = fds::COOLING;
+    }
+  }
+  
+  if (globalState == fds::HEATING) {
     digitalWrite(MOTOR_IN2, HIGH);
     digitalWrite(MOTOR_IN1, LOW);
     digitalWrite(LED_BUILTIN, HIGH);
@@ -70,7 +88,17 @@ void heatbed() {
   }
 }
 
+struct i2c_message {
+  double temp;
+  fds state;
+};
+
 void requestEvent() {
-  Wire.write("hello "); // respond with message of 6 bytes
-  // as expected by master
+  i2c_message msg;
+  msg.temp = heatbedTemperature;
+  msg.state = globalState;
+  
+  Wire.write((uint8_t *) &msg, sizeof(msg));
+  Serial.print("SENT = ");
+  Serial.println(sizeof(msg));
 }
