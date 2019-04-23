@@ -3,9 +3,9 @@
 #include <Adafruit_MAX31855.h>
 #include <Wire.h>
 
-#define MAXDO   3
+#define MAXDO   5
 #define MAXCS   4
-#define MAXCLK  5
+#define MAXCLK  3
 
 #define MOTOR_IN1 7
 #define MOTOR_IN2 8
